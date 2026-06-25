@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EcoAgro: Fazenda Sustentável</title>
+    <style>
+        :root {
+            --primary: #2e7d32;
+            --primary-light: #4caf50;
+            --secondary: #1565c0;
+            --dark: #212121;
+            --light: #f5f5f5;
+            --danger: #c62828;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: #e8f5e9;
+            color: var(--dark);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        header h1 {
+            color: var(--primary);
+            font-size: 2.5rem;
+            margin-bottom: 5px;
+        }
+
+        header p {
+            color: #555;
+            font-style: italic;
+        }
+
+        .game-container {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 700px;
+            padding: 30px;
+            text-align: center;
+        }
+
+        /* Painel de Status */
+        .status-panel {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 30px;
+            background: #f1f8e9;
+            padding: 15px;
+            border-radius: 10px;
+            border: 2px solid #c8e6c9;
+        }
+
+        .status-item {
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+
+        .status-value {
+            display: block;
+            font-size: 1.5rem;
+            margin-top: 5px;
+        }
+
+        #status-agro { color: var(--primary); }
+        #status-eco { color: var(--secondary); }
+        #status-rodada { color: var(--dark); }
+
+        /* Tela do Jogo */
+        .card {
+            min-height: 200px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .scenario-text {
+            font-size: 1.3rem;
+            line-height: 1.6;
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        /* Botões de Decisão */
+        .options-container {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        button {
+            background-color: white;
+            border: 2px solid var(--primary);
+            color: var(--primary);
+            padding: 15px 20px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: left;
+        }
+
+        button:hover {
+            background-color: var(--primary);
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        /* Tela Final e Reset */
+        .hidden {
+            display: none !important;
+        }
+
+        .feedback {
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+
+        .restart-btn {
+            background-color: var(--secondary);
+            color: white;
+            border: none;
+            text-align: center;
+            display: inline-block;
+            margin-top: 20px;
+        }
+        .restart-btn:hover {
+            background-color: #0d47a1;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>EcoAgro</h1>
+        <p>O Desafio da Fazenda Sustentável</p>
+    </header>
+
+    <div class="game-container">
+        <div class="status-panel">
+            <div class="status-item">
+                Produção (Agro)
+                <span id="status-agro" class="status-value">50%</span>
+            </div>
+            <div class="status-item">
+                Sustentabilidade (Eco)
+                <span id="status-eco" class="status-value">50%</span>
+            </div>
+            <div class="status-item">
+                Decisão
+                <span id="status-rodada" class="status-value">1/5</span>
+            </div>
+        </div>
+
+        <div id="game-screen">
+            <div class="card">
+                <p id="scenario-text" class="scenario-text">Carregando desafio...</p>
+            </div>
+
+            <div id="options-container" class="options-container">
+                </div>
+        </div>
+
+        <div id="end-screen" class="hidden">
+            <h2 id="end-title" style="margin-bottom: 15px;">Fim da Temporada!</h2>
+            <p id="end-message" style="font-size: 1.2rem; margin-bottom: 20px; line-height: 1.6;"></p>
+            <button class="restart-btn" onclick="restartGame()">Jogar Novamente</button>
+        </div>
+    </div>
+
+    <script>
+        // Banco de dados dos cenários/perguntas do jogo
+        const scenarios = [
+            {
+                text: "Pragas estão ameaçando a plantação de soja. O que você decide fazer?",
+                options: [
+                    {
+                        text: "Aplicar defensivos químicos pesados imediatamente para salvar 100% da produção.",
+                        agro: 25, eco: -20
+                    },
+                    {
+                        text: "Adotar o Manejo Integrado de Pragas (MIP), usando controle biológico e monitoramento.",
+                        agro: 10, eco: 15
+                    }
+                ]
+            },
+            {
+                text: "O período de seca está se aproximando. Qual será sua estratégia de irrigação?",
+                options: [
+                    {
+                        text: "Manter a irrigação por inundação contínua para garantir o crescimento rápido.",
+                        agro: 15, eco: -25
+                    },
+                    {
+                        text: "Instalar um sistema de irrigação por gotejamento automatizado para economizar água.",
+                        agro: 5, eco: 20
+                    }
+                ]
+            },
+            {
+                text: "Sua propriedade possui uma área de mata ciliar degradada perto do rio. O que fazer?",
+                options: [
+                    {
+                        text: "Ignorar a mata e expandir a área de pastagem para o gado lucrar mais rápido.",
+                        agro: 20, eco: -30
+                    },
+                    {
+                        text: "Isolar a área e plantar mudas nativas para recuperar a APP (Área de Preservação Permanente).",
+                        agro: -5, eco: 25
+                    }
+                ]
+            },
+            {
+                text: "O solo da sua principal área de cultivo está perdendo nutrientes. Qual o plano?",
+                options: [
+                    {
+                        text: "Abusar de fertilizantes sintéticos concentrados para a próxima colheita.",
+                        agro: 20, eco: -15
+                    },
+                    {
+                        text: "Fazer rotação de culturas utilizando leguminosas para fixar nitrogênio naturalmente.",
+                        agro: 10, eco: 15
+                    }
+                ]
+            },
+            {
+                text: "O que fazer com os restos de colheita e embalagens de insumos da fazenda?",
+                options: [
+                    {
+                        text: "Queimar os restos orgânicos e descartar as embalagens no limite da propriedade.",
+                        agro: 5, eco: -25
+                    },
+                    {
+                        text: "Fazer compostagem da matéria orgânica e enviar as embalagens tríplice lavadas para reciclagem.",
+                        agro: 5, eco: 20
+                    }
+                ]
+            }
+        ];
+
+        // Estado do Jogo
+        let currentScenarioIndex = 0;
+        let agroScore = 50;
+        let ecoScore = 50;
+
+        // Elementos do DOM
+        const scenarioTextEl = document.getElementById("scenario-text");
+        const optionsContainerEl = document.getElementById("options-container");
+        const agroStatusEl = document.getElementById("status-agro");
+        const ecoStatusEl = document.getElementById("status-eco");
+        const rodadaStatusEl = document.getElementById("status-rodada");
+        const gameScreenEl = document.getElementById("game-screen");
+        const endScreenEl = document.getElementById("end-screen");
+        const endTitleEl = document.getElementById("end-title");
+        const endMessageEl = document.getElementById("end-message");
+
+        // Inicializa o jogo
+        function startGame() {
+            currentScenarioIndex = 0;
+            agroScore = 50;
+            ecoScore = 50;
+            gameScreenEl.classList.remove("hidden");
+            endScreenEl.classList.add("hidden");
+            updateStatus();
+            loadScenario();
+        }
+
+        // Atualiza os painéis visuais de pontos
+        function updateStatus() {
+            // Limita os valores entre 0 e 100
+            agroScore = Math.max(0, Math.min(100, agroScore));
+            ecoScore = Math.max(0, Math.min(100, ecoScore));
+
+            agroStatusEl.innerText = `${agroScore}%`;
+            ecoStatusEl.innerText = `${ecoScore}%`;
+            rodadaStatusEl.innerText = `${currentScenarioIndex + 1}/${scenarios.length}`;
+        }
+
+        // Carrega a pergunta atual
+        function loadScenario() {
+            if (currentScenarioIndex >= scenarios.length) {
+                endGame();
+                return;
+            }
+
+            const currentScenario = scenarios[currentScenarioIndex];
+            scenarioTextEl.innerText = currentScenario.text;
+            optionsContainerEl.innerHTML = "";
+
+            currentScenario.options.forEach(option => {
+                const button = document.createElement("button");
+                button.innerText = option.text;
+                button.onclick = () => handleChoice(option.agro, option.eco);
+                optionsContainerEl.appendChild(button);
+            });
+            
+            rodadaStatusEl.innerText = `${currentScenarioIndex + 1}/${scenarios.length}`;
+        }
+
+        // Processa a escolha do jogador
+        function handleChoice(agroMod, ecoMod) {
+            agroScore += agroMod;
+            ecoScore += ecoMod;
+            
+            currentScenarioIndex++;
+            
+            // Pequena validação caso zere no meio do caminho
+            if (agroScore <= 0 || ecoScore <= 0) {
+                endGame();
+            } else {
+                updateStatus();
+                loadScenario();
+            }
+        }
+
+        // Tela de finalização
+        function endGame() {
+            gameScreenEl.classList.add("hidden");
+            endScreenEl.classList.remove("hidden");
+            
+            // Atualiza status final na tela interna
+            agroStatusEl.innerText = `${Math.max(0, Math.min(100, agroScore))}%`;
+            ecoStatusEl.innerText = `${Math.max(0, Math.min(100, ecoScore))}%`;
+
+            if (agroScore <= 20) {
+                endTitleEl.innerText = "Falência Econômica! ❌";
+                endMessageEl.innerText = "Sua preocupação ambiental foi exemplar, mas a fazenda não se pagou e quebrou financeiramente. O Agro forte precisa de viabilidade econômica.";
+            } else if (ecoScore <= 20) {
+                endTitleEl.innerText = "Desastre Ambiental! ❌";
+                endMessageEl.innerText = "Você focou apenas no lucro rápido. O solo esgotou, a água secou e a fiscalização multou a fazenda. Não há futuro no agro sem sustentabilidade.";
+            } else if (agroScore >= 60 && ecoScore >= 60) {
+                endTitleEl.innerText = "Fazenda do Futuro! 🏆 Sustentabilidade Máxima";
+                endMessageEl.innerText = `Parabéns! Você alcançou o equilíbrio perfeito (Agro: ${agroScore}% | Eco: ${ecoScore}%). Provou que é possível produzir em alta escala protegendo os recursos naturais para as próximas gerações!`;
+            } else {
+                endTitleEl.innerText = "Fazenda Regular! ⚖️";
+                endMessageEl.innerText = `Sua fazenda sobreviveu (Agro: ${agroScore}% | Eco: ${ecoScore}%), mas com desafios. Tente jogar novamente para otimizar suas escolhas e alcançar a excelência sustentável!`;
+            }
+        }
+
+        function restartGame() {
+            startGame();
+        }
+
+        // Iniciar ao carregar a página
+        window.onload = startGame;
+    </script>
+</body>
+</html>
